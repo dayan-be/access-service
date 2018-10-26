@@ -1,21 +1,51 @@
 package access
 
+
 import (
-	"net"
-	"github.com/go-log/log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/micro/go-log"
 )
 
-type tcpServer struct {
-	addr string
-	l net.Listener
-	exit chan chan error
+type Server interface {
+	Options() Options
+	Init(...Option) error
+	Start() error
+	Stop() error
 }
 
-func (s *tcpServer) run() error {
-	if err := s.start(); err != nil {
+
+type Option func(*Options)
+
+var (
+	DefaultAddress        = ":0"
+	DefaultServer  Server = newRpcServer()
+)
+
+// DefaultOptions returns config options for the default service
+func DefaultOptions() Options {
+	return DefaultServer.Options()
+}
+
+// Init initialises the default server with options passed in
+func Init(opt ...Option) {
+	if DefaultServer == nil {
+		DefaultServer = newTcpServer(opt...)
+	}
+	DefaultServer.Init(opt...)
+}
+
+// NewServer returns a new server with options passed in
+func NewServer(opt ...Option) Server {
+	return newTcpServer(opt...)
+}
+
+// Run starts the default server and waits for a kill
+// signal before exiting. Also registers/deregisters the server
+func Run() error {
+	if err := Start(); err != nil {
 		return err
 	}
 
@@ -23,42 +53,19 @@ func (s *tcpServer) run() error {
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 	log.Logf("Received signal %s", <-ch)
 
-	return s.stop()
+	return Stop()
 }
 
-func (s *tcpServer) start() error {
-	addr, err := net.ResolveTCPAddr("tcp", s.addr)
-	if err != nil {
-		return err
-	}
-
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	s.l = l
-
-	log.Log("listen success. addr:", addr)
-
-	go s.accept()
-
-	go func() {
-		ch := <-s.exit
-
-		ch <- s.l.Close() //关闭socket
-	}()
-
-	return nil
+// Start starts the default server
+func Start() error {
+	config := DefaultServer.Options()
+	log.Logf("Starting server %s id %s", config.Name, config.Id)
+	return DefaultServer.Start()
 }
 
-func (s *tcpServer) accept() error {
-
-	return nil
+// Stop stops the default server
+func Stop() error {
+	log.Logf("Stopping server")
+	return DefaultServer.Stop()
 }
 
-func (s *tcpServer) stop() error {
-	ch := make(chan error)
-	s.exit <- ch
-	return <-ch
-}
