@@ -178,34 +178,7 @@ func (h *tcpTransportSocket) Recv(m *Message) error {
 		h.conn.SetDeadline(time.Now().Add(h.tt.opts.Timeout))
 	}
 
-	r, err := http.ReadRequest(h.buff)
-	if err != nil {
-		return err
-	}
 
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	r.Body.Close()
-	m.Body = b
-
-	if m.Header == nil {
-		m.Header = make(map[string]string)
-	}
-
-	for k, v := range r.Header {
-		if len(v) > 0 {
-			m.Header[k] = v[0]
-		} else {
-			m.Header[k] = ""
-		}
-	}
-
-	select {
-	case h.r <- r:
-	default:
-	}
 
 	return nil
 }
@@ -328,42 +301,6 @@ func (h *tcpTransportListener) Accept(fn func(Socket)) error {
 }
 
 func (h *tcpTransport) Dial(addr string, opts ...DialOption) (Client, error) {
-	//dopts := DialOptions{
-	//	Timeout: DefaultDialTimeout,
-	//}
-	//
-	//for _, opt := range opts {
-	//	opt(&dopts)
-	//}
-	//
-	//var conn net.Conn
-	//var err error
-	//
-	//// TODO: support dial option here rather than using internal config
-	//if h.opts.Secure || h.opts.TLSConfig != nil {
-	//	config := h.opts.TLSConfig
-	//	if config == nil {
-	//		config = &tls.Config{
-	//			InsecureSkipVerify: true,
-	//		}
-	//	}
-	//	conn, err = tls.DialWithDialer(&net.Dialer{Timeout: dopts.Timeout}, "tcp", addr, config)
-	//} else {
-	//	conn, err = net.DialTimeout("tcp", addr, dopts.Timeout)
-	//}
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//return &tcpTransportClient{
-	//	tt:       h,
-	//	addr:     addr,
-	//	conn:     conn,
-	//	buff:     bufio.NewReader(conn),
-	//	dialOpts: dopts,
-	//	r:        make(chan *http.Request, 1),
-	//}, nil
 
 	return nil, nil
 }

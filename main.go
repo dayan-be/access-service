@@ -19,7 +19,7 @@ func main() {
 	service.Init()
 
 	// Register Handlers
-	access.RegisterPushHandler(service.Server(), new(access_micro.Handler))
+	access.RegisterPushHandler(service.Server(), new(logic.server))
 
 	// Run server
 	if err := service.Run(); err != nil {

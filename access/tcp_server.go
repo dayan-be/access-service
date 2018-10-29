@@ -18,6 +18,8 @@ type tcpServer struct {
 	registered bool
 	// graceful exit
 	wg sync.WaitGroup
+	// manage uid:link
+	h *Handler
 }
 
 func newTcpServer(opts ...Option) Server {
@@ -25,6 +27,7 @@ func newTcpServer(opts ...Option) Server {
 	return &tcpServer{
 		opts: options,
 		exit:        make(chan chan error),
+		h:newHandler(),
 	}
 }
 
@@ -47,6 +50,12 @@ func (s *tcpServer) accept(sock anet.Socket) {
 
 		// add to wait group
 		s.wg.Add(1)
+
+		err := s.h.handle(sock, &msg)
+		if err != nil {
+			s.wg.Done()
+			return
+		}
 		//
 		//// we use this Timeout header to set a server deadline
 		//to := msg.Header["Timeout"]
