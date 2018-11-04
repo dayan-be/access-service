@@ -1,26 +1,26 @@
 package logic
 
 import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"github.com/dayan-be/access-service/proto"
+	"github.com/go-log/log"
+	"github.com/gogo/protobuf/proto"
+	"io"
 	"net"
 	"runtime/debug"
-	"io"
-	"errors"
-	"github.com/go-log/log"
-	"encoding/binary"
-	"github.com/dayan-be/access-service/proto"
-	"github.com/gogo/protobuf/proto"
-	"bytes"
 )
 
 const (
-	MAX_PACKAGE_SIZE = 64*1024*1024
+	MAX_PACKAGE_SIZE = 64 * 1024 * 1024
 )
 
 type session struct {
 	net.Conn
-	uid uint64
+	uid  uint64
 	auth bool
-	s *server
+	s    *server
 
 	readBuf  *bytes.Buffer
 	writeBuf *bytes.Buffer
@@ -28,9 +28,9 @@ type session struct {
 
 func newSession(conn net.Conn) Session {
 	return &session{
-		Conn:conn,
-		readBuf:bytes.NewBuffer(make([]byte, 0, MAX_PACKAGE_SIZE)),
-		writeBuf:bytes.NewBuffer(make([]byte, 0, MAX_PACKAGE_SIZE)),
+		Conn:     conn,
+		readBuf:  bytes.NewBuffer(make([]byte, 0, MAX_PACKAGE_SIZE)),
+		writeBuf: bytes.NewBuffer(make([]byte, 0, MAX_PACKAGE_SIZE)),
 	}
 }
 
@@ -41,8 +41,8 @@ type Session interface {
 
 type Message struct {
 	Flag [2]byte // 业务标识
-	Len uint32 // 业务包长度
-	Body []byte // 业务包
+	Len  uint32  // 业务包长度
+	Body []byte  // 业务包
 }
 
 func (s *session) readAtLeast(buf []byte, size int) (err error) {
@@ -80,7 +80,6 @@ func (s *session) ReadLoop(conn net.Conn) error {
 
 	for {
 
-
 		flag := make([]byte, 2, 2)
 
 		if err := s.readAtLeast(flag, 2); err != nil {
@@ -117,7 +116,7 @@ func (s *session) ReadLoop(conn net.Conn) error {
 }
 
 func (s *session) Send(msg *access.PkgRsp) error {
-	buf := make([]byte, 4, )
+	buf := make([]byte, 4)
 }
 
 func (s *session) handleRequest(body []byte) error {

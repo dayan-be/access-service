@@ -19,4 +19,3 @@ func Addr(addr string) Option {
 		o.Addr = addr
 	}
 }
-

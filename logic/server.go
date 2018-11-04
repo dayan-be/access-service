@@ -1,13 +1,12 @@
 package logic
 
 import (
+	"context"
+	"github.com/dayan-be/access-service/proto"
+	"github.com/go-log/log"
 	"net"
 	"sync"
-	"github.com/go-log/log"
 	"time"
-	"runtime/debug"
-	"github.com/dayan-be/access-service/proto"
-	"context"
 )
 
 type Server struct {
@@ -20,9 +19,7 @@ type Server struct {
 }
 
 func newServer() *Server {
-	return &Server{
-
-	}
+	return &Server{}
 }
 
 func (s *Server) Options() Options {

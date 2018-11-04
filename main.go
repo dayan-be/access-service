@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/dayan-be/access-service/logic/access-micro"
+	"github.com/dayan-be/access-service/proto"
+	"github.com/micro/go-log"
 	"github.com/micro/go-micro"
 	"time"
-	"github.com/dayan-be/access-service/proto"
-	"github.com/dayan-be/access-service/logic/access-micro"
-	"github.com/micro/go-log"
 )
 
 func main() {
