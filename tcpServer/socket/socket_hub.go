@@ -54,5 +54,3 @@ func (sh *SocketHub) Range(f func(Socket) bool) {
 		return f(value.(Socket))
 	})
 }
-
-

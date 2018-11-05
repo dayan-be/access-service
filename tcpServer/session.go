@@ -4,54 +4,51 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/dayan-be/access-service/proto"
 	"github.com/dayan-be/access-service/tcpServer/socket"
 	"github.com/gogo/protobuf/proto"
-	"github.com/dayan-be/access-service/proto"
 	"golang.org/x/net/context"
 	"io"
 	"net"
 	"sync"
 )
 
-
 const (
 	MSG_READ_SIZE   = 4096
 	MSG_BUFFER_SIZE = 10240
 )
 
-type Session struct{
-	socket socket.Socket
-	uid  uint64
-	authed bool
+type Session struct {
+	socket        socket.Socket
+	uid           uint64
+	authed        bool
 	colseNotifyCh chan struct{}
-	status int32
-	srv *TcpServer
+	status        int32
+	srv           *TcpServer
 }
 
-func NewSession(srv *TcpServer,id uint64, con net.Conn)*Session{
+func NewSession(srv *TcpServer, id uint64, con net.Conn) *Session {
 	ss := &Session{
-		socket:socket.NewSocket(con),
-		uid:0,
-		authed:false,
-		srv: srv,
+		socket: socket.NewSocket(con),
+		uid:    0,
+		authed: false,
+		srv:    srv,
 	}
 
 	ss.socket.SetFid(id)
 	return ss
 }
 
-func (ss *Session)Id()uint64{
+func (ss *Session) Id() uint64 {
 	return ss.socket.GetFid()
 }
 
-
-
-func (ss *Session)Close()error{
+func (ss *Session) Close() error {
 	ss.srv.sessionHub.Delete(ss.Id())
 	return ss.socket.Close()
 }
 
-func (ss *Session)StartReadAndHandle(){
+func (ss *Session) StartReadAndHandle() {
 	ctx := context.Background()
 	msgbuf := bytes.NewBuffer(make([]byte, 0, MSG_BUFFER_SIZE))
 	// 数据缓冲
@@ -102,7 +99,7 @@ func (ss *Session)StartReadAndHandle(){
 			// 消息体
 			if length > 0 && msgbuf.Len() >= length {
 				length = 0
-				go ss.HandleMsg(ctx,msgbuf.Next(length))
+				go ss.HandleMsg(ctx, msgbuf.Next(length))
 			} else {
 				break
 			}
@@ -111,25 +108,24 @@ func (ss *Session)StartReadAndHandle(){
 
 }
 
+func (ss *Session) HandleMsg(ctx context.Context, msg []byte) {
+	reqPkg := new(access.PkgReq)
+	err := proto.Unmarshal(msg, reqPkg)
+	if err != nil {
+		return
+	}
 
-func (ss *Session)HandleMsg(ctx context.Context, msg []byte){
-		reqPkg := new(access.PkgReq)
-		err := proto.Unmarshal(msg, reqPkg)
-		if err != nil{
-			return
-		}
+	//todo:调用后端服务
+	//1.认证socket
 
-		//todo:调用后端服务
-		//1.认证socket
-
-		//2.
+	//2.
 
 }
 
-func (ss *Session)WriteMsg(msg []byte)error{
+func (ss *Session) WriteMsg(msg []byte) error {
 	length := len(msg)
-	buf := bytes.NewBuffer(make([]byte,0,4))
-	err := binary.Write(buf,binary.LittleEndian,length)
+	buf := bytes.NewBuffer(make([]byte, 0, 4))
+	err := binary.Write(buf, binary.LittleEndian, length)
 	if err != nil {
 		return err
 	}
@@ -140,11 +136,9 @@ func (ss *Session)WriteMsg(msg []byte)error{
 	return nil
 }
 
-
-type SessionHub struct{
+type SessionHub struct {
 	sessions sync.Map
 }
-
 
 func NewSessionHub() *SessionHub {
 	return &SessionHub{}
@@ -157,7 +151,7 @@ func (sh *SessionHub) Add(ss *Session) {
 		return
 	}
 	sh.sessions.Store(ss.Id(), ss)
-	if oldSession := _session.(*Session); ss != oldSession{
+	if oldSession := _session.(*Session); ss != oldSession {
 		oldSession.Close()
 	}
 

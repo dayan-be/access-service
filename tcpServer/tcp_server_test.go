@@ -6,6 +6,6 @@ import (
 )
 
 func TestTcpServer_Run(t *testing.T) {
-	err,listener := net.ListenTCP("tcp",)
+	err, listener := net.ListenTCP("tcp")
 	s := NewTcpServer()
 }
