@@ -1,194 +1,154 @@
 package tcpServer
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
-	"fmt"
-	"github.com/dayan-be/access-service/proto"
-	"github.com/dayan-be/access-service/tcpServer/socket"
-	"github.com/gogo/protobuf/proto"
-	"io"
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-const (
-	MSG_READ_SIZE   = 4096
-	MSG_BUFFER_SIZE = 10240
-)
+
 
 type Options struct {
 	writeTimeout    int
 	readTimeout     int
 	deadlineTimeout int
+	srvId        uint32 //当前服务实例id
 }
 
-func SetDeadlineTime(t int)Option{
+type Option func(*Options)
+
+func SetDeadlineTimeOut(t int)Option{
 	return func(o *Options){
 		o.deadlineTimeout = t
 	}
 }
 
+func SetReadTimeout(t int)Option{
+	return func(o *Options){
+		o.readTimeout = t
+	}
+}
 
-type Option func(*Options)
+func SetWriteTimeout(t int)Option{
+	return func(o *Options){
+		o.writeTimeout = t
+	}
+}
+
+func SetSrvId(id uint32)Option{
+	return func(o *Options){
+		o.srvId = id
+	}
+}
+
 
 type TcpServer struct {
-	uid2Fid   sync.Map
+	uid2Sid   sync.Map
 	opt       Options
 	listener  *net.TCPListener
 	wg        sync.WaitGroup
-	socketHub *socket.SocketHub
+	sessionHub SessionHub
 	scnt      uint32 //当前socket 计数
-	Id        uint32 //当前服务实例id
+	baseValue uint64 //会话id的基础值
+	closeCh   chan struct{}
 }
 
 func NewTcpServer(l *net.TCPListener, op ...Option) *TcpServer {
 	s := &TcpServer{
 		listener:  l,
-		socketHub: socket.NewSocketHub(),
+		scnt:0,
 	}
 
 	for _, o := range op {
 		o(&(s.opt))
 	}
+	s.baseValue = uint64(s.opt.srvId) << 32
 	return s
 }
 
+// ErrListenClosed listener is closed error.
+var ErrListenClosed = errors.New("listener is closed")
 
-func (srv *TcpServer) Init() {
+func (srv *TcpServer) Run() error{
 
-}
-
-func (srv *TcpServer) Run() {
-
+	var (
+		tempDelay time.Duration // how long to sleep on accept failure
+		closeCh   = srv.closeCh
+	)
 	for {
-		s, err := srv.listener.Accept()
-		if err != nil {
-
+		conn, e := srv.listener.Accept()
+		if e != nil {
+			select {
+			case <-closeCh:
+				return ErrListenClosed
+			default:
+			}
+			if ne, ok := e.(net.Error); ok && ne.Temporary() {
+				if tempDelay == 0 {
+					tempDelay = 5 * time.Millisecond
+				} else {
+					tempDelay *= 2
+				}
+				if max := 1 * time.Second; tempDelay > max {
+					tempDelay = max
+				}
+				time.Sleep(tempDelay)
+				continue
+			}
+			return e
 		}
-		base := uint64(srv.Id) << 32
-		tmp := srv.scnt + 1
-		ss := socket.NewSocket(s)
-		ss.SetFid(base + uint64(tmp))
+		tempDelay = 0
 
-		go srv.MsgHandle(ss)
+		go func(con net.Conn,srv *TcpServer){
+			id := atomic.AddUint32(&srv.scnt,1)
+			tmp := srv.baseValue + uint64(id)
+			var sess = NewSession(srv,tmp ,conn)
+			srv.sessionHub.Add(sess)
+			sess.StartReadAndHandle()
+		}(conn, srv)
 	}
 
+
+
+		return nil
 }
 
-func (s *TcpServer) Stop() {
-
+func (srv *TcpServer) Stop()error {
+	var (
+		count int
+	)
+	srv.sessionHub.Range(func(sess *Session) bool {
+		count++
+		sess.Close()
+		return true
+	})
+	return nil
 }
+
+
 
 //向指定uid发送消息
 func (srv *TcpServer) SendMsgByUid(uid uint64, msg []byte) error {
-	fid, loaded := srv.uid2Fid.Load(uid)
+	sid, loaded := srv.uid2Sid.Load(uid)
 	if loaded {
-		return srv.SendMsgByfid(fid.(uint64), msg)
+		return srv.SendMsgBySid(sid.(uint64), msg)
 	}
 	return errors.New("not find uid :" + strconv.FormatUint(uid, 10))
 }
 
-//向指定链路id发送消息
-func (srv *TcpServer) SendMsgByfid(fid uint64, msg []byte) error {
-	_socket, loaded := srv.socketHub.Get(fid)
+
+
+
+//向指定会话id发送消息
+func (srv *TcpServer) SendMsgBySid(sid uint64, msg []byte) error {
+	_ss, loaded := srv.sessionHub.Get(sid)
 	if loaded {
-		length := len(msg)
-		buf := bytes.NewBuffer(make([]byte,0,4))
-		err := binary.Write(buf,binary.LittleEndian,length)
-		if err != nil {
-			return err
-		}
-
-		var totalMsg []byte
-		totalMsg = append(totalMsg, []byte("DY")...)
-		totalMsg = append(totalMsg, buf.Bytes()...)
-		totalMsg = append(totalMsg, msg...)
-		_, err = _socket.Write(totalMsg)
-		return err
+		return _ss.WriteMsg(msg)
 	}
-	return errors.New("not find fid" + strconv.FormatUint(fid, 10))
-}
-
-//处理链接消息
-func (srv *TcpServer) MsgHandle(socket socket.Socket) {
-	defer srv.socketHub.Delete(socket.GetFid())
-	//初始化socket
-	srv.socketHub.Add(socket)
-	socket.SetWriteDeadline(time.Now().Add(time.Duration(srv.opt.deadlineTimeout)))
-	socket.SetWriteDeadline(time.Now().Add(time.Duration(srv.opt.writeTimeout)))
-	socket.SetReadDeadline(time.Now().Add(time.Duration(srv.opt.readTimeout)))
-
-	// 消息缓冲
-	msgbuf := bytes.NewBuffer(make([]byte, 0, MSG_BUFFER_SIZE))
-	// 数据缓冲
-	databuf := make([]byte, MSG_READ_SIZE)
-	// 消息长度
-	length := 0
-	// 消息长度uint32
-	ulength := uint32(0)
-	msgFlag := ""
-
-	for {
-		// 读取数据
-		n, err := socket.Read(databuf)
-		if err == io.EOF {
-			fmt.Printf("Client exit: %s\n", socket.RemoteAddr())
-		}
-		if err != nil {
-			fmt.Printf("Read error: %s\n", err)
-			return
-		}
-		fmt.Println(databuf[:n])
-		// 数据添加到消息缓冲
-		n, err = msgbuf.Write(databuf[:n])
-		if err != nil {
-			fmt.Printf("Buffer write error: %s\n", err)
-			return
-		}
-
-		// 消息分割循环
-		for {
-			// 消息头
-			if length == 0 && msgbuf.Len() >= 6 {
-				msgFlag = string(msgbuf.Next(2))
-				if msgFlag != "DY" {
-					fmt.Printf("invalid message")
-					srv.socketHub.Delete(socket.GetFid())
-					return
-				}
-				binary.Read(msgbuf, binary.LittleEndian, &ulength)
-				length = int(ulength)
-				// 检查超长消息
-				if length > MSG_BUFFER_SIZE {
-					fmt.Printf("Message too length: %d\n", length)
-					srv.socketHub.Delete(socket.GetFid())
-					return
-				}
-			}
-			// 消息体
-			if length > 0 && msgbuf.Len() >= length {
-				go srv.ProcMsg(socket.GetFid(),msgbuf.Next(length))
-				length = 0
-			} else {
-				break
-			}
-		}
-	}
+	return errors.New("not find fid" + strconv.FormatUint(sid, 10))
 }
 
 
-
-func (srv *TcpServer)ProcMsg(fid uint64, msg []byte){
-		reqPkg := new(access.PkgReq)
-		err := proto.Unmarshal(msg, reqPkg)
-		if err != nil{
-			return
-		}
-
-		//todo:调用后端服务
-
-}

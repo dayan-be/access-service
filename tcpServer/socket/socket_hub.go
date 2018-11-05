@@ -48,3 +48,11 @@ func (sh *SocketHub) Get(fid uint64) (Socket, bool) {
 	}
 	return _socket.(Socket), true
 }
+
+func (sh *SocketHub) Range(f func(Socket) bool) {
+	sh.fid2Socket.Range(func(key, value interface{}) bool {
+		return f(value.(Socket))
+	})
+}
+
+

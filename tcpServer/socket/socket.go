@@ -30,17 +30,11 @@ type (
 		SetFid(fid uint64)
 
 		GetFid() uint64
-
-		//设置uid
-		SetUid(uid uint64)
-
-		GetUid() uint64
 	}
 
-	//tips:fid,uid的读写没有加锁，由一个地方写，其他地方读
+	//tips:fid的读写没有加锁，由一个地方写，其他地方读
 	socket struct {
 		con              net.Conn
-		uid              uint64
 		fid              uint64
 		readerWithBuffer *bufio.Reader
 		mu               sync.RWMutex
