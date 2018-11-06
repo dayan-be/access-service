@@ -1,12 +1,10 @@
-package tcpServer
+package tcp_server
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/dayan-be/access-service/proto"
-	"github.com/dayan-be/access-service/tcpServer/socket"
-	"github.com/gogo/protobuf/proto"
+	"github.com/dayan-be/access-service/tcp_server/socket"
 	"golang.org/x/net/context"
 	"io"
 	"net"
@@ -109,17 +107,7 @@ func (ss *Session) StartReadAndHandle() {
 }
 
 func (ss *Session) HandleMsg(ctx context.Context, msg []byte) {
-	reqPkg := new(access.PkgReq)
-	err := proto.Unmarshal(msg, reqPkg)
-	if err != nil {
-		return
-	}
-
-	//todo:调用后端服务
-	//1.认证socket
-
-	//2.
-
+	ss.srv.opt.MsgProFunc(ctx, msg)
 }
 
 func (ss *Session) WriteMsg(msg []byte) error {

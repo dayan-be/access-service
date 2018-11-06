@@ -1,4 +1,4 @@
-package tcpServer
+package tcp_server
 
 import (
 	"net"

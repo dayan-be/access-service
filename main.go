@@ -1,28 +1,18 @@
 package main
 
 import (
-	"github.com/dayan-be/access-service/logic/access-micro"
-	"github.com/dayan-be/access-service/proto"
-	"github.com/micro/go-log"
-	"github.com/micro/go-micro"
-	"time"
+	"github.com/dayan-be/access-service/logic"
+	"github.com/sirupsen/logrus"
+	_ "github.com/dayan-be/golibs/log"
 )
 
 func main() {
-	service := micro.NewService(
-		micro.Name("go.micro.srv.greeter"),
-		micro.RegisterTTL(time.Second*30),
-		micro.RegisterInterval(time.Second*10),
-	)
 
-	// optionally setup command line usage
-	service.Init()
+	//1.load configer
+	cfg := logic.Config()
+	cfg.Load()
 
-	// Register Handlers
-	access.RegisterPushHandler(service.Server(), new(logic.server))
+	//2.log
+	logrus.Info("aaa")
 
-	// Run server
-	if err := service.Run(); err != nil {
-		log.Fatal(err)
-	}
 }

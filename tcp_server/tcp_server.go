@@ -1,6 +1,7 @@
-package tcpServer
+package tcp_server
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strconv"
@@ -14,6 +15,7 @@ type Options struct {
 	readTimeout     int
 	deadlineTimeout int
 	srvId           uint32 //当前服务实例id
+	MsgProFunc      func(context.Context, []byte)
 }
 
 type Option func(*Options)
@@ -39,6 +41,12 @@ func SetWriteTimeout(t int) Option {
 func SetSrvId(id uint32) Option {
 	return func(o *Options) {
 		o.srvId = id
+	}
+}
+
+func SetMsgProcFunc(f func(context.Context, []byte)) Option {
+	return func(o *Options) {
+		o.MsgProFunc = f
 	}
 }
 
