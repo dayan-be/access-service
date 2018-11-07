@@ -15,7 +15,8 @@ type Options struct {
 	readTimeout     int
 	deadlineTimeout int
 	srvId           uint32 //当前服务实例id
-	MsgProFunc      func(context.Context, []byte)
+	msgProFunc      func(context.Context, []byte)
+	port            int
 }
 
 type Option func(*Options)
@@ -46,7 +47,13 @@ func SetSrvId(id uint32) Option {
 
 func SetMsgProcFunc(f func(context.Context, []byte)) Option {
 	return func(o *Options) {
-		o.MsgProFunc = f
+		o.msgProFunc = f
+	}
+}
+
+func SetListenPort(p int)Option{
+	return func(o *Options){
+		 o.port = p
 	}
 }
 

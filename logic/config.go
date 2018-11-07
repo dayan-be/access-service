@@ -12,7 +12,7 @@ type Configer struct {
 	Srv struct {
 		SrvName string `yaml:"srvName"`
 		SrvId   uint32 `yaml:"srvId"`
-		Port    int32  `yaml:"port"`
+		Port    int  `yaml:"port"`
 	}
 
 	Log struct {
@@ -46,8 +46,9 @@ func (c *Configer) Load() {
 	if err != nil {
 		goto FAILED
 	}
+	return
 
 FAILED:
-	fmt.Printf("Failed to open config.yaml")
+	fmt.Printf("failed:%v",err)
 	os.Exit(1)
 }

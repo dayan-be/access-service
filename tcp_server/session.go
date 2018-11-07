@@ -107,7 +107,7 @@ func (ss *Session) StartReadAndHandle() {
 }
 
 func (ss *Session) HandleMsg(ctx context.Context, msg []byte) {
-	ss.srv.opt.MsgProFunc(ctx, msg)
+	ss.srv.opt.msgProFunc(ctx, msg)
 }
 
 func (ss *Session) WriteMsg(msg []byte) error {
