@@ -31,6 +31,7 @@ func main() {
 	cfg.Load()
 
 	//2.log
-	logrus.Println("aa")
+	logrus.SetLevel(logrus.DebugLevel)
+
 
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	log "github.com/sirupsen/logrus"
 )
 
 type Options struct {
@@ -60,7 +61,7 @@ func SetListenPort(p int)Option{
 type TcpServer struct {
 	uid2Sid    sync.Map
 	opt        Options
-	listener   *net.TCPListener
+	listener   net.Listener
 	wg         sync.WaitGroup
 	sessionHub SessionHub
 	scnt       uint32 //当前socket 计数
@@ -68,9 +69,8 @@ type TcpServer struct {
 	closeCh    chan struct{}
 }
 
-func NewTcpServer(l *net.TCPListener, op ...Option) *TcpServer {
+func NewTcpServer(op ...Option) *TcpServer {
 	s := &TcpServer{
-		listener: l,
 		scnt:     0,
 	}
 
@@ -85,7 +85,13 @@ func NewTcpServer(l *net.TCPListener, op ...Option) *TcpServer {
 var ErrListenClosed = errors.New("listener is closed")
 
 func (srv *TcpServer) Run() error {
-
+	var err error
+	port := strconv.FormatInt(int64(srv.opt.port),10)
+	addr := "0.0.0.0:" + port
+	srv.listener ,err = net.Listen("tcp",addr)
+	if err != nil {
+		log.Errorf("listen failed:%v",err)
+	}
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
 		closeCh   = srv.closeCh
