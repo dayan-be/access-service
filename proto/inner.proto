@@ -12,7 +12,10 @@ enum CODE {
 
 message PushReq {
     uint64 uid = 1; //uid
-    bytes  body = 2; //
+    string service = 2;
+    string method = 3;
+    bytes  content = 4; //
+    uint64 seq = 5;
 }
 
 message PushRsp {

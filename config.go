@@ -1,4 +1,4 @@
-package logic
+package main
 
 import (
 	"fmt"
@@ -12,7 +12,8 @@ type Configer struct {
 	Srv struct {
 		SrvName string `yaml:"srvName"`
 		SrvId   uint32 `yaml:"srvId"`
-		Port    int  `yaml:"port"`
+		Addr    string `yaml:"addr"`
+		Version string `yaml:"version"`
 	}
 
 	Log struct {

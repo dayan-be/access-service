@@ -5,12 +5,17 @@ message Device {
     string guid = 1; // device guid
 }
 
+message Account {
+    string email = 1;
+    string phoneNum = 2;
+    string password = 3;
+    string token = 4;
+}
+
 message ReqHead {
     Device dev = 1; // device info
     string ver = 2; // app version
-    uint64 uid = 3;
-    string password = 4; // passwd
-    string token = 5; // token
+    Account account = 3; // 账号信息
 }
 
 message ReqBody {
@@ -45,11 +50,19 @@ message RspHead {
 message RspBody {
     string service = 1; // 服务
     string method = 2; // 方法
-    bytes content = 3; // 业务消息
+    uint32 id = 3; // 服务id
+    bytes content = 4; // 业务消息
+    uint32 code = 5; // 状态码
+}
+
+enum MsgType {
+    Call = 0;
+    Push = 1;
 }
 
 message PkgRspHead {
     uint64 seq = 1;
+    MsgType type = 2;
     // encrypt
     // compress
 }
@@ -63,3 +76,4 @@ message PkgRsp {
     PkgRspHead head = 1;
     PkgRspBody body = 2;
 }
+

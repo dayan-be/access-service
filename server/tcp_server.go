@@ -1,4 +1,4 @@
-package tcp_server
+package server
 
 import (
 	"context"
@@ -16,45 +16,49 @@ type Options struct {
 	readTimeout     int
 	deadlineTimeout int
 	srvId           uint32 //当前服务实例id
-	msgProFunc      func(context.Context, []byte)
-	port            int
+	handleRequest   func(context.Context, *Session, []byte) error
+	addr            string
 }
+
+var (
+	DefaultAddr = "0.0.0.0:9999"
+)
 
 type Option func(*Options)
 
-func SetDeadlineTimeOut(t int) Option {
+func DeadlineTimeOut(t int) Option {
 	return func(o *Options) {
 		o.deadlineTimeout = t
 	}
 }
 
-func SetReadTimeout(t int) Option {
+func ReadTimeout(t int) Option {
 	return func(o *Options) {
 		o.readTimeout = t
 	}
 }
 
-func SetWriteTimeout(t int) Option {
+func WriteTimeout(t int) Option {
 	return func(o *Options) {
 		o.writeTimeout = t
 	}
 }
 
-func SetSrvId(id uint32) Option {
+func SrvId(id uint32) Option {
 	return func(o *Options) {
 		o.srvId = id
 	}
 }
 
-func SetMsgProcFunc(f func(context.Context, []byte)) Option {
+func HandleRequest(f func(context.Context, *Session, []byte) error) Option {
 	return func(o *Options) {
-		o.msgProFunc = f
+		o.handleRequest = f
 	}
 }
 
-func SetListenPort(p int)Option{
+func Addr(addr string) Option {
 	return func(o *Options){
-		 o.port = p
+		 o.addr = addr
 	}
 }
 
@@ -64,18 +68,22 @@ type TcpServer struct {
 	listener   net.Listener
 	wg         sync.WaitGroup
 	sessionHub SessionHub
-	scnt       uint32 //当前socket 计数
+	sockCnt    uint32 //当前socket 计数
 	baseValue  uint64 //会话id的基础值
 	closeCh    chan struct{}
 }
 
 func NewTcpServer(op ...Option) *TcpServer {
 	s := &TcpServer{
-		scnt:     0,
+		sockCnt:     0,
 	}
 
 	for _, o := range op {
 		o(&(s.opt))
+	}
+
+	if s.opt.addr == "" {
+		s.opt.addr = DefaultAddr
 	}
 	s.baseValue = uint64(s.opt.srvId) << 32
 	return s
@@ -84,20 +92,19 @@ func NewTcpServer(op ...Option) *TcpServer {
 // ErrListenClosed listener is closed error.
 var ErrListenClosed = errors.New("listener is closed")
 
-func (srv *TcpServer) Run() error {
+func (s *TcpServer) Run() error {
 	var err error
-	port := strconv.FormatInt(int64(srv.opt.port),10)
-	addr := "0.0.0.0:" + port
-	srv.listener ,err = net.Listen("tcp",addr)
+
+	s.listener ,err = net.Listen("tcp", s.opt.addr)
 	if err != nil {
 		log.Errorf("listen failed:%v",err)
 	}
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
-		closeCh   = srv.closeCh
+		closeCh   = s.closeCh
 	)
 	for {
-		conn, e := srv.listener.Accept()
+		conn, e := s.listener.Accept()
 		if e != nil {
 			select {
 			case <-closeCh:
@@ -120,42 +127,42 @@ func (srv *TcpServer) Run() error {
 		}
 		tempDelay = 0
 
-		go func(con net.Conn, srv *TcpServer) {
-			id := atomic.AddUint32(&srv.scnt, 1)
-			tmp := srv.baseValue + uint64(id)
-			var sess = NewSession(srv, tmp, conn)
-			srv.sessionHub.Add(sess)
-			sess.StartReadAndHandle()
-		}(conn, srv)
+		go func(con net.Conn, s *TcpServer) {
+			id := atomic.AddUint32(&s.sockCnt, 1)
+			tmp := s.baseValue + uint64(id)
+			var ses = NewSession(s, tmp, conn)
+			s.sessionHub.Add(ses)
+			ses.StartReadAndHandle()
+		}(conn, s)
 	}
 
 	return nil
 }
 
-func (srv *TcpServer) Stop() error {
+func (s *TcpServer) Stop() error {
 	var (
 		count int
 	)
-	srv.sessionHub.Range(func(sess *Session) bool {
+	s.sessionHub.Range(func(ses *Session) bool {
 		count++
-		sess.Close()
+		ses.Close()
 		return true
 	})
 	return nil
 }
 
 //向指定uid发送消息
-func (srv *TcpServer) SendMsgByUid(uid uint64, msg []byte) error {
-	sid, loaded := srv.uid2Sid.Load(uid)
+func (s *TcpServer) SendMsgByUid(uid uint64, msg []byte) error {
+	sid, loaded := s.uid2Sid.Load(uid)
 	if loaded {
-		return srv.SendMsgBySid(sid.(uint64), msg)
+		return s.SendMsgBySid(sid.(uint64), msg)
 	}
 	return errors.New("not find uid :" + strconv.FormatUint(uid, 10))
 }
 
 //向指定会话id发送消息
-func (srv *TcpServer) SendMsgBySid(sid uint64, msg []byte) error {
-	_ss, loaded := srv.sessionHub.Get(sid)
+func (s *TcpServer) SendMsgBySid(sid uint64, msg []byte) error {
+	_ss, loaded := s.sessionHub.Get(sid)
 	if loaded {
 		return _ss.WriteMsg(msg)
 	}

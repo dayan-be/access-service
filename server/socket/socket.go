@@ -36,6 +36,7 @@ type (
 	socket struct {
 		con              net.Conn
 		fid              uint64
+		uid uint64
 		readerWithBuffer *bufio.Reader
 		mu               sync.RWMutex
 	}

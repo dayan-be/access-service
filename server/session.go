@@ -1,10 +1,10 @@
-package tcp_server
+package server
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/dayan-be/access-service/tcp_server/socket"
+	"github.com/dayan-be/access-service/server/socket"
 	"golang.org/x/net/context"
 	"io"
 	"net"
@@ -19,7 +19,7 @@ const (
 type Session struct {
 	socket        socket.Socket
 	uid           uint64
-	authed        bool
+	Authed        bool
 	colseNotifyCh chan struct{}
 	status        int32
 	srv           *TcpServer
@@ -29,7 +29,7 @@ func NewSession(srv *TcpServer, id uint64, con net.Conn) *Session {
 	ss := &Session{
 		socket: socket.NewSocket(con),
 		uid:    0,
-		authed: false,
+		Authed: false,
 		srv:    srv,
 	}
 
@@ -107,7 +107,7 @@ func (ss *Session) StartReadAndHandle() {
 }
 
 func (ss *Session) HandleMsg(ctx context.Context, msg []byte) {
-	ss.srv.opt.msgProFunc(ctx, msg)
+	ss.srv.opt.handleRequest(ctx, ss, msg)
 }
 
 func (ss *Session) WriteMsg(msg []byte) error {
@@ -150,7 +150,7 @@ func (sh *SessionHub) Delete(id uint64) {
 	if !loaded {
 		return
 	} else {
-		_ss.(Session).Close()
+		_ss.(*Session).Close()
 		sh.sessions.Delete(id)
 	}
 }
