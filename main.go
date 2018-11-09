@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/dayan-be/access-service/logic"
 	_ "github.com/dayan-be/golibs/log"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -32,10 +33,10 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	//1.load configer
-	cfg := Config()
+	cfg := logic.Config()
 	cfg.Load()
 
-	h := NewHandle()
+	h := logic.NewHandle()
 	h.Start()
 
 	c := make(chan os.Signal, 1)
