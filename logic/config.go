@@ -10,7 +10,6 @@ import (
 
 type Configer struct {
 	Srv struct {
-		SrvName string `yaml:"srvName"`
 		SrvId   uint32 `yaml:"srvId"`
 		Addr    string `yaml:"addr"`
 		Version string `yaml:"version"`
@@ -21,7 +20,7 @@ type Configer struct {
 		Level    int    `yaml:"level"`
 		FileSize int    `yaml:"fileSize"`
 		SizeUnit string `yaml:"sizeUnit"`
-		JsonFile bool   `yaml:"jsonFile"`
+		JsonFile bool   `yaml:"json"`
 	}
 }
 

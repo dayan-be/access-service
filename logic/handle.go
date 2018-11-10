@@ -28,7 +28,7 @@ func NewHandle() *Handle {
 		server.HandleRequest(h.HandleRequest),
 	)
 	h.microSrv = micro.NewService(
-		micro.Name(Config().Srv.SrvName),
+		micro.Name("access-service"),
 		micro.RegisterTTL(time.Second*30),
 		micro.RegisterInterval(time.Second*10),
 		micro.Version(Config().Srv.Version),

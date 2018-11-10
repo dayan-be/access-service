@@ -5,17 +5,18 @@ message Device {
     string guid = 1; // device guid
 }
 
-message Account {
+message User {
     string email = 1;
     string phoneNum = 2;
     string password = 3;
     string token = 4;
 }
 
+//------- 二级包 （begin)------
 message ReqHead {
-    Device dev = 1; // device info
-    string ver = 2; // app version
-    Account account = 3; // 账号信息
+    Device dev  = 1; // device info
+    string ver  = 2; // app version
+    User   user = 3; // 账号信息
 }
 
 message ReqBody {
@@ -23,7 +24,10 @@ message ReqBody {
     string method = 2; // 方法
     bytes content = 3; // 业务消息
 }
+//-------- 二级包 (end) ------
 
+
+//------ 一级包（begin）------
 message PkgReqHead {
     uint64 seq = 1;
     // encrypt
@@ -35,12 +39,17 @@ message PkgReqBody {
     repeated ReqBody bodys = 2;
 }
 
+//----- 一级包（end) ---------
+
+//-----请求包定义-----
 message PkgReq {
     PkgReqHead head = 1;
     PkgReqBody body = 2;
 }
 
-//---------------------------
+//---------------------------响应消息定义---------------
+
+//-----------二级包 begin (一级包体)-------
 message RspHead {
     uint64 uid = 1; // uid
     string token = 2; // token
@@ -55,11 +64,14 @@ message RspBody {
     uint32 code = 5; // 状态码
 }
 
+//--------二级包 end -------------
+
 enum MsgType {
     Call = 0;
     Push = 1;
 }
 
+//--------- 一级包 begin -----
 message PkgRspHead {
     uint64 seq = 1;
     MsgType type = 2;
@@ -72,6 +84,9 @@ message PkgRspBody {
     repeated RspBody bodys = 2;
 }
 
+//------- 一级包 end -------
+
+//响应包
 message PkgRsp {
     PkgRspHead head = 1;
     PkgRspBody body = 2;

@@ -1,8 +1,11 @@
 srv:
-    srvName: acess-service
     srvId: 0
-    port: 8080
+    addr: 0.0.0.0:8080
+    version: 0.0.0
 log:
-    logLevel: 1
-    logFileSize: 10
-    jsonFile: false
+    level: 1
+    fileSize: 10
+    sizeUnit: M
+    json: false
+    path: ./log
+

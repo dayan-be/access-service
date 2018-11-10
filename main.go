@@ -34,11 +34,11 @@ func main() {
 
 	//2.log
 	logrus.SetLevel(logrus.DebugLevel)
-	log.NewLogFile(log.FileCompress(false),
+	logrus.SetOutput(log.NewLogFile(log.FileCompress(false),
 		log.FileSize(cfg.Log.FileSize, cfg.Log.SizeUnit),
 		log.FileTime(true),
 		log.FilePath(cfg.Log.Path),
-	)
+	))
 
 	h := logic.NewHandle()
 	h.Start()
