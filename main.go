@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dayan-be/access-service/logic"
-	_ "github.com/dayan-be/golibs/log"
+	_ "github.com/dayan-be/kit/log"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
