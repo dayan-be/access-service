@@ -17,12 +17,12 @@ type Configer struct {
 	}
 
 	Log struct {
-		LogLevel    int  `yaml:"logLevel"`
-		LogFileSize int  `yaml:"logFileSize"`
-		JsonFile    bool `yaml:"jsonFile"`
+		Path     string `yaml:"path"`
+		Level    int    `yaml:"level"`
+		FileSize int    `yaml:"fileSize"`
+		SizeUnit string `yaml:"sizeUnit"`
+		JsonFile bool   `yaml:"jsonFile"`
 	}
-
-
 }
 
 var cfgIns *Configer
@@ -50,6 +50,6 @@ func (c *Configer) Load() {
 	return
 
 FAILED:
-	fmt.Printf("failed:%v",err)
+	fmt.Printf("failed:%v", err)
 	os.Exit(1)
 }

@@ -36,7 +36,7 @@ type (
 	socket struct {
 		con              net.Conn
 		fid              uint64
-		uid uint64
+		uid              uint64
 		readerWithBuffer *bufio.Reader
 		mu               sync.RWMutex
 	}
@@ -49,6 +49,7 @@ func NewSocket(con net.Conn) Socket {
 }
 
 func newSocket(c net.Conn) *socket {
+	c.(*net.TCPConn).SetKeepAlive(true)
 	return &socket{
 		con:              c,
 		readerWithBuffer: bufio.NewReaderSize(c, READ_SIZE),

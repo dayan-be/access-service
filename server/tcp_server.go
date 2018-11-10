@@ -3,12 +3,12 @@ package server
 import (
 	"context"
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-	log "github.com/sirupsen/logrus"
 )
 
 type Options struct {
@@ -57,8 +57,8 @@ func HandleRequest(f func(context.Context, *Session, []byte) error) Option {
 }
 
 func Addr(addr string) Option {
-	return func(o *Options){
-		 o.addr = addr
+	return func(o *Options) {
+		o.addr = addr
 	}
 }
 
@@ -75,7 +75,7 @@ type TcpServer struct {
 
 func NewTcpServer(op ...Option) *TcpServer {
 	s := &TcpServer{
-		sockCnt:     0,
+		sockCnt: 0,
 	}
 
 	for _, o := range op {
@@ -95,9 +95,9 @@ var ErrListenClosed = errors.New("listener is closed")
 func (s *TcpServer) Run() error {
 	var err error
 
-	s.listener ,err = net.Listen("tcp", s.opt.addr)
+	s.listener, err = net.Listen("tcp", s.opt.addr)
 	if err != nil {
-		log.Errorf("listen failed:%v",err)
+		log.Errorf("listen failed:%v", err)
 	}
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
@@ -126,17 +126,19 @@ func (s *TcpServer) Run() error {
 			return e
 		}
 		tempDelay = 0
-
-		go func(con net.Conn, s *TcpServer) {
-			id := atomic.AddUint32(&s.sockCnt, 1)
-			tmp := s.baseValue + uint64(id)
-			var ses = NewSession(s, tmp, conn)
-			s.sessionHub.Add(ses)
-			ses.StartReadAndHandle()
-		}(conn, s)
+		go s.acceptCon(conn)
 	}
 
 	return nil
+}
+
+//接受客户端连接
+func (s *TcpServer) acceptCon(con net.Conn) {
+	id := atomic.AddUint32(&s.sockCnt, 1)
+	tmp := s.baseValue + uint64(id)
+	var ses = NewSession(s, tmp, con)
+	s.sessionHub.Add(ses)
+	ses.StartReadAndHandle()
 }
 
 func (s *TcpServer) Stop() error {

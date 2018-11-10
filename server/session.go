@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 const (
@@ -32,7 +33,9 @@ func NewSession(srv *TcpServer, id uint64, con net.Conn) *Session {
 		Authed: false,
 		srv:    srv,
 	}
-
+	ss.socket.SetDeadline(time.Now().Add(time.Duration(10 * time.Second)))
+	ss.socket.SetReadDeadline(time.Now().Add(time.Duration(6 * time.Second)))
+	ss.socket.SetWriteDeadline(time.Now().Add(time.Duration(6 * time.Second)))
 	ss.socket.SetFid(id)
 	return ss
 }
@@ -48,18 +51,18 @@ func (ss *Session) Close() error {
 
 func (ss *Session) StartReadAndHandle() {
 	ctx := context.Background()
-	msgbuf := bytes.NewBuffer(make([]byte, 0, MSG_BUFFER_SIZE))
+	msgBuf := bytes.NewBuffer(make([]byte, 0, MSG_BUFFER_SIZE))
 	// 数据缓冲
-	databuf := make([]byte, MSG_READ_SIZE)
+	dataBuf := make([]byte, MSG_READ_SIZE)
 	// 消息长度
 	length := 0
 	// 消息长度uint32
-	ulength := uint32(0)
+	uLen := uint32(0)
 	msgFlag := ""
 
 	for {
 		// 读取数据
-		n, err := ss.socket.Read(databuf)
+		n, err := ss.socket.Read(dataBuf)
 		if err == io.EOF {
 			fmt.Printf("Client exit: %s\n", ss.socket.RemoteAddr())
 		}
@@ -67,9 +70,9 @@ func (ss *Session) StartReadAndHandle() {
 			fmt.Printf("Read error: %s\n", err)
 			return
 		}
-		fmt.Println(databuf[:n])
+		fmt.Println(dataBuf[:n])
 		// 数据添加到消息缓冲
-		n, err = msgbuf.Write(databuf[:n])
+		n, err = msgBuf.Write(dataBuf[:n])
 		if err != nil {
 			fmt.Printf("Buffer write error: %s\n", err)
 			return
@@ -78,15 +81,15 @@ func (ss *Session) StartReadAndHandle() {
 		// 消息分割循环
 		for {
 			// 消息头
-			if length == 0 && msgbuf.Len() >= 6 {
-				msgFlag = string(msgbuf.Next(2))
+			if length == 0 && msgBuf.Len() >= 6 {
+				msgFlag = string(msgBuf.Next(2))
 				if msgFlag != "DY" {
 					fmt.Printf("invalid message")
 					ss.srv.sessionHub.Delete(ss.socket.GetFid())
 					return
 				}
-				binary.Read(msgbuf, binary.LittleEndian, &ulength)
-				length = int(ulength)
+				binary.Read(msgBuf, binary.LittleEndian, &uLen)
+				length = int(uLen)
 				// 检查超长消息
 				if length > MSG_BUFFER_SIZE {
 					fmt.Printf("Message too length: %d\n", length)
@@ -95,9 +98,9 @@ func (ss *Session) StartReadAndHandle() {
 				}
 			}
 			// 消息体
-			if length > 0 && msgbuf.Len() >= length {
+			if length > 0 && msgBuf.Len() >= length {
 				length = 0
-				go ss.HandleMsg(ctx, msgbuf.Next(length))
+				go ss.HandleMsg(ctx, msgBuf.Next(length))
 			} else {
 				break
 			}

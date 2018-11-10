@@ -111,10 +111,10 @@ func (h *Handle) HandleRequest(ctx context.Context, ses *server.Session, body []
 		for _, subReq := range req.Body.Bodys {
 			out, err := h.RawCallMicroService(ctx, subReq.Service, subReq.Method, subReq.Content)
 			rspBody := &access.RspBody{
-				Service:              subReq.Service,
-				Method:               subReq.Method,
-				Content:              out,
-				Code: 0,
+				Service: subReq.Service,
+				Method:  subReq.Method,
+				Content: out,
+				Code:    0,
 			}
 			if err != nil {
 				rspBody.Code = 1
@@ -158,7 +158,7 @@ func (h *Handle) PushMsg(uid uint64, msg *access.PkgRsp) error {
 func (h *Handle) RawCallMicroService(ctx context.Context, service, method string, in []byte, opts ...client.CallOption) (out []byte, err error) {
 	c := client.NewClient(client.Codec("byte-rpc", byterpc.NewCodec))
 	req := c.NewRequest(service, method, in, client.WithContentType("byte-rpc"))
-	out =[]byte{}
+	out = []byte{}
 
 	err = c.Call(ctx, req, &out, opts...)
 	if err != nil {
