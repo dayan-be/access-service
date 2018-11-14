@@ -2,3 +2,5 @@
 *.log
 access-service
 access-service.exe
+vendor
+go.sum
